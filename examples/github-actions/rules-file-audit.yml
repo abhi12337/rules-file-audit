@@ -1,0 +1,34 @@
+# Copy to .github/workflows/rules-file-audit.yml in a repo that has AI coding-assistant rules
+# files (.cursorrules, CLAUDE.md, AGENTS.md, .github/copilot-instructions.md, ...) or agent
+# settings (.claude/settings.json, .vscode/settings.json, .codex/config.toml).
+# Static only: it reads the checked-out files and makes no network requests.
+name: rules-file-audit
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  rules-file-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Pin to a release tag or commit of rules-file-audit you have reviewed.
+      - run: pipx install "git+https://github.com/OWNER/rules-file-audit@v0.1.0"
+      - name: Audit rules files and agent configs (fails on high/critical)
+        run: rules-file-audit scan . --no-color --fail-on high
+      - name: JSON report artifact
+        if: always()
+        run: rules-file-audit scan . --json --fail-on never > rules-file-audit.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rules-file-audit-report
+          path: rules-file-audit.json

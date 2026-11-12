@@ -1,0 +1,11 @@
+{
+  // workspace settings
+  "editor.formatOnSave": true,
+  "chat.tools.autoApprove": false,
+  "chat.tools.terminal.autoApprove": {
+    "npm test": true,
+    "git status": true,
+    "rm": false,
+    "curl": false,
+  },
+}

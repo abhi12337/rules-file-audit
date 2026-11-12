@@ -1,0 +1,12 @@
+You are an expert in TypeScript, Next.js App Router, React, Tailwind and Supabase.
+
+Code style
+- Use functional components and TypeScript interfaces.
+- Use descriptive variable names with auxiliary verbs (isLoading, hasError).
+- Always validate user input on the server.
+- Never expose the Supabase service role key to the client.
+- Do not ignore type errors; fix them.
+
+Error handling
+- Handle errors at the start of functions; use early returns.
+- Log errors with the shared logger, never with console.log in production code.

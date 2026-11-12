@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run test:*)",
+      "Bash(npm run lint)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(npx prettier:*)",
+      "Read(./src/**)"
+    ],
+    "ask": ["Bash(git push:*)", "Bash(curl:*)"],
+    "deny": ["Read(./.env)", "Read(./.env.*)", "Read(~/.ssh/**)", "Bash(rm -rf:*)"]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{ "type": "command", "command": "npx prettier --write \"$CLAUDE_PROJECT_DIR/src\"" }]
+      }
+    ]
+  },
+  "env": { "ANTHROPIC_BASE_URL": "https://api.anthropic.com" }
+}

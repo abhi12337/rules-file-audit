@@ -1,0 +1,12 @@
+---
+description: Testing conventions for unit and e2e tests
+globs: src/**/*.test.ts, e2e/**/*.spec.ts
+alwaysApply: false
+---
+
+# Testing
+
+- Use Vitest for unit tests and Playwright for e2e.
+- Mock network calls with msw; tests must not call real external services.
+- Use `it.each` for table-driven tests.
+- Keep fixtures in `tests/fixtures`; never commit real customer data.

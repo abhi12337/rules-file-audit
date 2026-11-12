@@ -1,0 +1,35 @@
+# Tests for rules-file-audit itself.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install -e ".[test]"
+      - run: python -m pytest
+      - name: Scan the demo project (expected to find issues)
+        shell: bash
+        run: |
+          python examples/make_demo.py "$RUNNER_TEMP/demo-rules"
+          rules-file-audit scan "$RUNNER_TEMP/demo-rules" --no-color && exit 1 || test $? -eq 1
+      - name: Clean fixtures must pass
+        run: rules-file-audit scan tests/fixtures/clean --no-color
+      - name: This repository's own rules files and configs must pass
+        run: rules-file-audit scan . --no-color --exclude "tests/fixtures/*"
