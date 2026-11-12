@@ -127,3 +127,34 @@ def test_classify_command_prefix():
     assert classify_command_prefix("FOO=1 curl")[0] == "high"
     assert classify_command_prefix("/usr/bin/wget")[0] == "high"
     assert classify_command_prefix("powershell.exe")[0] == "high"
+
+
+# ---------------------------------------------------------------- 0.1.1: current syntax and wording
+@pytest.mark.parametrize("old,new,sev", [
+    ("Bash(curl:*)", "Bash(curl *)", "high"), ("Bash(rm:*)", "Bash(rm *)", "high"),
+    ("Bash(python:*)", "Bash(python *)", "medium"), ("Bash(git push:*)", "Bash(git push *)", "medium"),
+])
+def test_legacy_and_current_prefix_syntax_are_classified_alike(old, new, sev):
+    assert claude({"permissions": {"allow": [old]}}) == claude({"permissions": {"allow": [new]}}) == [("RFA041", sev)]
+
+
+@pytest.mark.parametrize("entry", ["Bash(npm run test *)", "Bash(git diff *)", "Bash(python -m pytest *)"])
+def test_current_syntax_narrow_entries_are_fine(entry):
+    assert claude({"permissions": {"allow": [entry]}}) == []
+
+
+def test_claude_fix_uses_current_rule_syntax():
+    [f] = scan_claude_settings(".claude/settings.json", json.dumps({"permissions": {"allow": ["Bash(curl:*)"]}}))
+    assert '"Bash(npm run test *)"' in f.fix and '"Bash(curl *)"' in f.fix
+    assert ":*" not in f.fix.replace('"Bash(curl:*)"', "")      # only in the quoted entry itself
+
+
+def test_vscode_global_auto_approve_wording_does_not_overclaim():
+    [g] = scan_vscode_settings(".vscode/settings.json", '{"chat.tools.global.autoApprove": true}')
+    assert "ignores it in workspace settings" in g.message and "for everyone who opens" not in g.message
+    [old] = scan_vscode_settings(".vscode/settings.json", '{"chat.tools.autoApprove": true}')
+    assert "old name of chat.tools.global.autoApprove" in old.message and "1.102" in old.message
+    assert "chat.tools.global.autoApprove" in old.fix
+    both = scan_vscode_settings(".vscode/settings.json",
+                                '{"chat.tools.autoApprove": true, "chat.tools.global.autoApprove": true}')
+    assert [f.rule_id for f in both] == ["RFA040", "RFA040"]

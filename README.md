@@ -18,9 +18,10 @@ never sees. rules-file-audit finds:
 4. **Instructions that switch off safety**: skip tests, `--no-verify`, disable lint / security
    checks, turn off TLS verification, change the package registry, add `postinstall` scripts.
 5. **Agent permission configs that auto-approve dangerous actions**: Claude Code
-   `bypassPermissions`, `Bash` / `Bash(curl:*)` / `Bash(rm:*)` allow rules,
-   `enableAllProjectMcpServers`, `ANTHROPIC_BASE_URL` redirects and hook commands; VS Code
-   `chat.tools.autoApprove` and terminal auto-approve rules; Codex `approval_policy = "never"`.
+   `bypassPermissions`, `Bash` / `Bash(curl *)` / `Bash(rm *)` allow rules (and the older
+   `Bash(curl:*)` form), `enableAllProjectMcpServers`, `ANTHROPIC_BASE_URL` redirects and hook
+   commands; VS Code `chat.tools.global.autoApprove` (and its old name `chat.tools.autoApprove`)
+   and terminal auto-approve rules; Codex `approval_policy = "never"`.
 6. **Provenance**: rules files not tracked by git, and rules that tell the agent to fetch more
    rules from a URL.
 
@@ -69,7 +70,7 @@ points in every editor and in the GitHub diff. The first bullet carries 137 invi
 characters:
 
 ```text
-rules-file-audit 0.1.0
+rules-file-audit 0.1.1
 Scanned demo-rules/.cursorrules
 1 file(s): 1 instruction file(s), 0 agent config file(s)
 
@@ -105,7 +106,7 @@ Exit code: 1
 `rules-file-audit scan demo-rules/CLAUDE.md --min-severity high --brief`:
 
 ```text
-rules-file-audit 0.1.0
+rules-file-audit 0.1.1
 Scanned demo-rules/CLAUDE.md
 1 file(s): 1 instruction file(s), 0 agent config file(s)
 
@@ -159,7 +160,7 @@ Exit code: 1
 <summary>The whole demo project: <code>rules-file-audit scan demo-rules --brief</code> (4 rules files, Claude Code / VS Code / Codex configs)</summary>
 
 ```text
-rules-file-audit 0.1.0
+rules-file-audit 0.1.1
 Scanned demo-rules
 7 file(s): 4 instruction file(s), 3 agent config file(s)
 
@@ -255,8 +256,10 @@ HIGH     RFA040  Agent configured to skip permission prompts
 
 HIGH     RFA040  Agent configured to skip permission prompts
       at: .vscode/settings.json:3
-      "chat.tools.autoApprove": true auto-approves every agent tool call (terminal commands, file
-      edits, fetches) for everyone who opens this workspace.
+      "chat.tools.autoApprove": true is the old name of chat.tools.global.autoApprove: VS Code
+      1.102 and earlier apply it from workspace settings, auto-approving every agent tool call
+      (terminal commands, file edits, fetches) for everyone who opens this workspace with those
+      versions. Current VS Code no longer reads it.
       text: "chat.tools.autoApprove": true,
 
 HIGH     RFA041  Broad or dangerous command auto-approved
@@ -335,7 +338,7 @@ emoji, Hindi, Japanese, Arabic and French text, "never use --no-verify", "copy .
 to .env", a `curl` to localhost, HTML in code blocks and lint comments) produce no findings:
 
 ```text
-rules-file-audit 0.1.0
+rules-file-audit 0.1.1
 Scanned tests/fixtures/clean
 12 file(s): 8 instruction file(s), 4 agent config file(s)
 
@@ -348,7 +351,7 @@ A rules file that is not committed: `rules-file-audit scan git-demo --brief`, wh
 committed `CLAUDE.md` and an uncommitted `.cursorrules`:
 
 ```text
-rules-file-audit 0.1.0
+rules-file-audit 0.1.1
 Scanned git-demo
 2 file(s): 2 instruction file(s), 0 agent config file(s)
 
@@ -410,8 +413,8 @@ of strings, such as an MCP server's `args`, is joined and checked as one command
 
 | Rule | Severity | What it finds |
 |---|---|---|
-| RFA040 | High | Claude Code `.claude/settings*.json`: `"permissions": {"defaultMode": "bypassPermissions"}`. VS Code `.vscode/settings.json`: `"chat.tools.autoApprove": true` or `"chat.tools.global.autoApprove": true`. Codex `.codex/config.toml`: `approval_policy = "never"`, `sandbox_mode = "danger-full-access"`. |
-| RFA041 | High / Medium | Claude Code `permissions.allow` entries that approve too much: `Bash`, `Bash(*)`, a leading wildcard, network commands (`curl`, `wget`, `ssh`, `scp`, `nc`, `Invoke-WebRequest`, ...), shells and command runners (`bash`, `sh`, `pwsh`, `eval`, `xargs`, `env`, `sudo`, ...), deletion (`rm`, `Remove-Item`, `dd`, ...) with any arguments (High); interpreters (`python`, `node`, `npx`, ...), `git`, `git push`, `npm`, `gh api` with any arguments, and a bare `WebFetch` (Medium). Exact commands (`Bash(git status)`), named scripts (`Bash(npm run test:*)`, `Bash(python -m pytest:*)`) and `ask` / `deny` lists are not reported. VS Code `chat.tools.terminal.autoApprove` entries set to `true` (or `{"approve": true}`) are classified the same way; regex keys are tested against sample commands, so `/.*/` is reported as "matches everything". |
+| RFA040 | High | Claude Code `.claude/settings*.json`: `"permissions": {"defaultMode": "bypassPermissions"}`. VS Code `.vscode/settings.json`: `"chat.tools.global.autoApprove": true` or its old name `"chat.tools.autoApprove": true`. VS Code honours `chat.tools.global.autoApprove` only in user settings and ignores it in workspace settings, so a committed copy does not switch approvals off for others; it is reported because it shows approvals are meant to be off and is easily copied into user settings, where it applies to every workspace. `chat.tools.autoApprove` was applied from workspace settings up to VS Code 1.102 and is no longer read by current versions. Codex `.codex/config.toml`: `approval_policy = "never"`, `sandbox_mode = "danger-full-access"`. |
+| RFA041 | High / Medium | Claude Code `permissions.allow` entries that approve too much (current `Bash(curl *)` and older `Bash(curl:*)` prefix syntax alike): `Bash`, `Bash(*)`, a leading wildcard, network commands (`curl`, `wget`, `ssh`, `scp`, `nc`, `Invoke-WebRequest`, ...), shells and command runners (`bash`, `sh`, `pwsh`, `eval`, `xargs`, `env`, `sudo`, ...), deletion (`rm`, `Remove-Item`, `dd`, ...) with any arguments (High); interpreters (`python`, `node`, `npx`, ...), `git`, `git push`, `npm`, `gh api` with any arguments, and a bare `WebFetch` (Medium). Exact commands (`Bash(git status)`), named scripts (`Bash(npm run test *)`, `Bash(python -m pytest *)`) and `ask` / `deny` lists are not reported. VS Code `chat.tools.terminal.autoApprove` entries set to `true` (or `{"approve": true}`) are classified the same way; regex keys are tested against sample commands, so `/.*/` is reported as "matches everything". |
 | RFA042 | Medium | Claude Code `"enableAllProjectMcpServers": true`. |
 | RFA043 | High | Claude Code `env.ANTHROPIC_BASE_URL` (or the Bedrock / Vertex variants) pointing anywhere other than Anthropic, AWS, Google or localhost. |
 | RFA020-022 | High | Claude Code `hooks`, `statusLine` and `apiKeyHelper` / `awsAuthRefresh` / `awsCredentialExport` / `otelHeadersHelper` commands (they run automatically). In a hook, `curl -d @-` or `$(cat)` posts the hook's JSON input (tool names, arguments, file contents) and is reported as exfiltration. |
@@ -505,10 +508,11 @@ or state a narrow, explicit exception. Configure registries in a reviewed `.npmr
 `pip.conf`; never use `--extra-index-url`. Enforce checks in CI and branch protection.
 
 **RFA040 / RFA041 / RFA042 / RFA043 - permission configs.** Use `defaultMode` `default` or
-`acceptEdits`; allow exact commands (`"Bash(npm run test:*)"`, `"Bash(git diff:*)"`) and move
+`acceptEdits`; allow exact commands (`"Bash(npm run test *)"`, `"Bash(git diff *)"`) and move
 network, delete and interpreter commands to `ask` / `deny`; approve MCP servers by name with
-`enabledMcpjsonServers`; keep `ANTHROPIC_BASE_URL` out of committed settings. In VS Code set
-`chat.tools.autoApprove` to `false`; in Codex use `approval_policy = "on-request"` and
+`enabledMcpjsonServers`; keep `ANTHROPIC_BASE_URL` out of committed settings. In VS Code remove
+`chat.tools.global.autoApprove` / `chat.tools.autoApprove` (or set them to `false`) and keep them
+out of user settings too; in Codex use `approval_policy = "on-request"` and
 `sandbox_mode = "workspace-write"`.
 
 **RFA050 / RFA051 - provenance.** Commit rules files so changes are reviewed; copy remote
@@ -539,7 +543,7 @@ report as an artifact. Combine it with CODEOWNERS on the rules files.
 ```json
 {
   "tool": "rules-file-audit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "targets": [
     "/abs/path/demo-rules"
   ],

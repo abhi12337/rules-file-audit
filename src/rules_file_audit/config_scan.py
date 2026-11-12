@@ -6,7 +6,7 @@ Only formats whose keys and semantics are documented and stable are interpreted:
     permissions.defaultMode, permissions.allow, enableAllProjectMcpServers, env, hooks,
     statusLine, apiKeyHelper (and the other *Helper / aws* command settings)
 - VS Code      .vscode/settings.json
-    chat.tools.autoApprove, chat.tools.global.autoApprove, chat.tools.terminal.autoApprove
+    chat.tools.global.autoApprove (and its old name chat.tools.autoApprove), chat.tools.terminal.autoApprove
 - Codex CLI    .codex/config.toml
     approval_policy, sandbox_mode
 
@@ -267,10 +267,22 @@ def scan_vscode_settings(rel: str, text: str) -> list[Finding] | None:
         ln = loc.find_line(needle)
         out.append(Finding(rule, sev, msg, rel, ln, snippet(loc.line_text(ln)), extra={"fmt": "vscode", **extra}))
 
-    for key in ("chat.tools.autoApprove", "chat.tools.global.autoApprove"):
-        if data.get(key) is True:
-            add("RFA040", "high", f"\"{key}\": true auto-approves every agent tool call (terminal commands, file "
-                                  f"edits, fetches) for everyone who opens this workspace.", key)
+    # chat.tools.global.autoApprove (VS Code 1.104+) is a user / machine setting: VS Code ignores it in a
+    # workspace's .vscode/settings.json. Its old name chat.tools.autoApprove was read from workspace settings
+    # up to VS Code 1.102 and is no longer read at all. Both are still reported: they show approvals are meant
+    # to be off, and older editors (or a copy into user settings) act on them.
+    if data.get("chat.tools.global.autoApprove") is True:
+        add("RFA040", "high", "\"chat.tools.global.autoApprove\": true turns off approval for every agent tool call "
+                              "(terminal commands, file edits, fetches) in every workspace. VS Code only honours it "
+                              "in user settings and ignores it in workspace settings, so it does not apply to others "
+                              "who open this workspace, but anyone who copies it into their user settings runs the "
+                              "agent with no prompts anywhere.", "chat.tools.global.autoApprove")
+    if data.get("chat.tools.autoApprove") is True:
+        add("RFA040", "high", "\"chat.tools.autoApprove\": true is the old name of chat.tools.global.autoApprove: "
+                              "VS Code 1.102 and earlier apply it from workspace settings, auto-approving every "
+                              "agent tool call (terminal commands, file edits, fetches) for everyone who opens this "
+                              "workspace with those versions. Current VS Code no longer reads it.",
+            "chat.tools.autoApprove")
     term = data.get("chat.tools.terminal.autoApprove")
     if isinstance(term, dict):
         for k, v in term.items():

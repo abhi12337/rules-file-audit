@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-11-12
+
+### Changed
+
+- RFA040 (VS Code): the message no longer claims that `"chat.tools.global.autoApprove": true`
+  in a workspace's `.vscode/settings.json` turns approvals off for everyone who opens the
+  workspace. VS Code honours that setting only in user settings and ignores it in workspace
+  settings; it is still reported, because it shows approvals are meant to be off and is easily
+  copied into user settings, where it applies to every workspace. `chat.tools.autoApprove` is
+  now described as the old name of the setting, applied from workspace settings up to VS Code
+  1.102 and no longer read by current versions. Both names are still detected.
+- RFA041 (Claude Code): fixes and docs use the current permission rule syntax
+  (`Bash(npm run test *)`, `Bash(curl *)`) instead of the older `:*` suffix. Both forms are
+  still detected and classified the same way.
+
 ## [0.1.0] - 2026-11-11
 
 First release.
